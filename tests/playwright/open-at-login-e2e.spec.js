@@ -13,6 +13,7 @@ const supportsOpenAtLogin = process.platform === 'darwin' || process.platform ==
 // Electron for tests that cannot run on this platform.
 const loginItemTest = supportsOpenAtLogin ? test : test.skip
 const linuxOnlyTest = isLinux ? test : test.skip
+const windowsOnlyTest = process.platform === 'win32' ? test : test.skip
 
 // On Windows the login item is registered with a command-line argument (see
 // registerOpenAtLogin in electron/main/index.ts) and app.getLoginItemSettings()
@@ -241,6 +242,34 @@ test.describe('openAtLogin e2e', { tag: "@e2e" }, () => {
             return app.getLoginItemSettings(query)
         }, loginItemQuery)
         expect(loginSettings.openAtLogin).toBe(false)
+    })
+
+    windowsOnlyTest('Windows login-item launch starts hidden when the window was hidden on quit', async () => {
+        // Windows has no wasOpenedAtLogin API, so the login item registered by
+        // registerOpenAtLogin() carries OPEN_AT_LOGIN_ARG and the app treats a
+        // launch with that argument as a login launch.
+        await closeElectronApp(electronApp)
+        electronApp = null
+
+        const configPath = path.join(userDataDir, 'config.json')
+        const config = JSON.parse(await fs.readFile(configPath, 'utf-8'))
+        config.windowConfig = { ...(config.windowConfig || {}), visibleOnQuit: false }
+        await fs.writeFile(configPath, JSON.stringify(config))
+
+        electronApp = await electron.launch({
+            args: ['--no-sandbox', 'tests/playwright/electron-runner.cjs', OPEN_AT_LOGIN_ARG],
+            env: {
+                ...process.env,
+                HEYNOTE_TEST_USER_DATA_DIR: userDataDir,
+            },
+        })
+        page = await electronApp.firstWindow()
+        await page.waitForLoadState('domcontentloaded')
+
+        const visible = await electronApp.evaluate(({ BrowserWindow }) => {
+            return BrowserWindow.getAllWindows().map((w) => w.isVisible())
+        })
+        expect(visible).toEqual([false])
     })
 
     test('windowConfig.visibleOnQuit is saved on app close', async () => {
