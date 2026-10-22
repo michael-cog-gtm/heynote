@@ -43,7 +43,7 @@ Platform notes:
 - 4-space indentation, no semicolons in JS/TS/Vue, double quotes in Vue/JS.
 - Keep platform conditionals explicit (`isMac`, `isWindows`, `isLinux`); Windows and macOS both support login items, Linux does not.
 - Add or extend a Playwright test for any behaviour change; e2e tests for anything in the Electron main process or Settings.
-- Do not commit `dist/`, `dist-electron/`, `release/`, or `test-results/`.
+- Do not commit `dist/`, `dist-electron/`, `release/`, or `test-results/`. Running the app or the e2e suite can leave `docs/index.md` modified (a trailing newline); discard that with `git checkout -- docs/index.md`, never commit it.
 - Verification of a change must be shown by real test output on the platform(s) it affects; the Linux e2e run skips the login-item tests, so Windows/macOS-specific changes must be exercised on those platforms.
 
 ## Verifying changes that touch macOS or Windows behaviour (required)

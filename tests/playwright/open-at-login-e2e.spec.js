@@ -108,7 +108,8 @@ async function closeElectronApp(electronApp) {
 
 
 test.describe('openAtLogin e2e', { tag: "@e2e" }, () => {
-    test.describe.configure({ mode: 'serial' })
+    // Each test launches its own Electron instance with a fresh user-data dir, so
+    // they are independent; not serial, so one failure does not hide the rest.
     test.skip(({ browserName }) => browserName !== 'chromium', 'Electron runs only once under chromium')
 
     /** @type {HeynotePage} */
