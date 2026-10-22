@@ -447,11 +447,15 @@ function registerShowInMenu() {
 }
 
 function registerOpenAtLogin() {
-    if (!isMac) {
+    if (!isMac && !isWindows) {
         return
     }
     const openAtLogin = CONFIG.get("settings.openAtLogin") as boolean
-    app.setLoginItemSettings({ openAtLogin })
+    // On Windows, pass an argument so wasOpenedAtLogin() can tell a login launch apart
+    app.setLoginItemSettings(isWindows ? {
+        openAtLogin,
+        args: openAtLogin ? [OPEN_AT_LOGIN_ARG] : [],
+    } : { openAtLogin })
 }
 
 function registerAlwaysOnTop() {
