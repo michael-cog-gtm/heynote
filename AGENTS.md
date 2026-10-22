@@ -52,3 +52,12 @@ then download `ripgrep-v15.0.0-<target>.{tar.gz|zip}` from https://github.com/mi
 - Add or extend a Playwright test for any behaviour change; e2e tests for anything in the Electron main process or Settings.
 - Do not commit `dist/`, `dist-electron/`, `release/`, or `test-results/`.
 - Verification of a change must be shown by real test output on the platform(s) it affects; the Linux e2e run skips the login-item tests, so Windows/macOS-specific changes must be exercised on those platforms.
+
+## Verifying changes that touch macOS or Windows behaviour (required)
+
+Linux cannot exercise login items, dock/tray, or OS keyboard conventions, so a Linux session must get real evidence from the other platforms instead of reasoning about it:
+
+1. Push the fix to a branch and, in parallel, start one child session on a **macOS** machine and one on a **Windows** machine (platform `macos` / `windows`). Give each child the branch name, the one-sentence description of the bug, and ask it to: read this file; build `main` and run the Electron e2e tests (before); build the branch and run them again (after); use its testing agent to record a short chaptered recording of the real app showing the behaviour (Settings → Launch at login → toggle → restart), plus a screenshot; and report the verbatim pass/fail/skip summaries and timings. Children must not change code or touch the PR.
+2. Collect each child's recording and screenshot (session attachments) and post them in **one PR comment** with a two-column table (macOS | Windows), the before/after test summaries per platform, and links to the child sessions. Also link the recordings from the PR description.
+3. Post a short summary (what was broken, what changed, evidence per platform, PR link) to the Slack channel named in the task, if one is named.
+4. Never merge; leave the PR open for review.
