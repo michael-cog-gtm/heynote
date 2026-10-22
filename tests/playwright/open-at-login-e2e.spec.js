@@ -14,6 +14,12 @@ const supportsOpenAtLogin = process.platform === 'darwin' || process.platform ==
 const loginItemTest = supportsOpenAtLogin ? test : test.skip
 const linuxOnlyTest = isLinux ? test : test.skip
 
+// On Windows the login item is registered with a command-line argument (see
+// registerOpenAtLogin in electron/main/index.ts) and app.getLoginItemSettings()
+// only reports it as enabled when queried with the same args.
+const OPEN_AT_LOGIN_ARG = "--heynote-open-at-login"
+const loginItemQuery = process.platform === 'win32' ? { args: [OPEN_AT_LOGIN_ARG] } : {}
+
 async function ensureElectronBuild() {
     const mainPath = path.join(process.cwd(), 'dist-electron', 'main', 'index.js')
     const preloadPath = path.join(process.cwd(), 'dist-electron', 'preload', 'index.js')
@@ -210,9 +216,9 @@ test.describe('openAtLogin e2e', { tag: "@e2e" }, () => {
         await expect(checkbox).toBeChecked()
 
         // Verify Electron's loginItemSettings
-        const loginSettings = await electronApp.evaluate(({ app }) => {
-            return app.getLoginItemSettings()
-        })
+        const loginSettings = await electronApp.evaluate(({ app }, query) => {
+            return app.getLoginItemSettings(query)
+        }, loginItemQuery)
         expect(loginSettings.openAtLogin).toBe(true)
     })
 
@@ -230,9 +236,9 @@ test.describe('openAtLogin e2e', { tag: "@e2e" }, () => {
         await expect(checkbox).not.toBeChecked()
 
         // Verify Electron's loginItemSettings is reset
-        const loginSettings = await electronApp.evaluate(({ app }) => {
-            return app.getLoginItemSettings()
-        })
+        const loginSettings = await electronApp.evaluate(({ app }, query) => {
+            return app.getLoginItemSettings(query)
+        }, loginItemQuery)
         expect(loginSettings.openAtLogin).toBe(false)
     })
 
