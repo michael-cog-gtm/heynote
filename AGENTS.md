@@ -8,7 +8,7 @@ Requires Node.js 24 (LTS). Run from the repo root.
 
 | Step | Command | Typical time |
 | --- | --- | --- |
-| Install deps + Playwright Chromium | `bash scripts/install-deps.sh` (never plain `npm ci`, see below) | Linux ~50 s, macOS ~15 s, Windows ~2.5 min |
+| Install deps + Playwright Chromium | `bash scripts/install-deps.sh` (Windows: `"C:/Program Files/Git/bin/bash.exe" scripts/install-deps.sh`; never plain `npm ci`, see below) | Linux ~50 s, macOS ~15 s, Windows ~2.5 min |
 | Build Electron bundles (`dist-electron/`) | `npx vite build` | ~15 s |
 | Type-check | `npx vue-tsc --noEmit` | ~5 s |
 | Unit tests (main process) | `npx vitest run` (`npm run test:main` starts watch mode) | ~2 s |
@@ -19,7 +19,7 @@ Requires Node.js 24 (LTS). Run from the repo root.
 Platform notes:
 - **Linux (headless VMs):** prefix Playwright commands with `xvfb-run --auto-servernum`. Electron needs `--no-sandbox` (already passed by the e2e specs). The image-paste e2e test is occasionally flaky under Xvfb; rerun it once before treating it as a failure.
 - **macOS:** run tests directly; a real Heynote window appears for Electron tests. Devin macOS machines have Node 24 via Homebrew.
-- **Windows:** run tests from Git Bash or PowerShell; a real Heynote window appears. Devin Windows machines ship Node 24 at `C:\hostedtoolcache\node\24.0.1\x64` (not on PATH; prepend it, or install the Node 24 LTS MSI from nodejs.org with `msiexec /i <file> /qn /norestart` **from PowerShell** — from Git Bash the flags get mangled and msiexec hangs). In Devin's non-TTY shell `bash` resolves to the WSL stub, so `npm`/`npx` (bash shims) fail with "No such file or directory": use `npm.cmd` / `npx.cmd`, or run scripts with `/usr/bin/bash scripts/install-deps.sh`, or use a TTY Git Bash session. `winget` is not available. Use PowerShell for process management (`Stop-Process -Name electron -Force`). Cold `install-deps.sh` takes ~2.5 min here (npm on NTFS).
+- **Windows:** run tests from Git Bash or PowerShell; a real Heynote window appears. Use a current **Node 24 LTS** (`C:\Program Files\nodejs`, installed from the nodejs.org MSI with `msiexec /i <file> /qn /norestart` **from PowerShell** — from Git Bash the flags get mangled and msiexec hangs). Do not use the preinstalled `C:\hostedtoolcache\node\24.0.1` (Playwright fails at import on 24.0.x: `context.conditions?.includes is not a function`) or the Node 20 on PATH. In Devin's non-TTY shell `bash` resolves to the WSL stub, so the bare `npm`/`npx` shims fail with "No such file or directory": use `npm.cmd` / `npx.cmd`, and run the install script as `"C:/Program Files/Git/bin/bash.exe" scripts/install-deps.sh`. `winget` is not available. Use PowerShell for process management (`Stop-Process -Name electron -Force`). Cold `install-deps.sh` takes ~2.5 min here (npm on NTFS).
 
 ### Install gotcha (why not plain `npm ci`)
 `@vscode/ripgrep`'s postinstall downloads a binary via the GitHub API and fails with HTTP 403 from rate-limited/shared IPs (Devin VMs); plain `npm ci` then retries for ~20 minutes before failing. `scripts/install-deps.sh` does the equivalent safely on all three platforms: `npm ci --ignore-scripts`, `node node_modules/electron/install.js`, `npx patch-package`, fetches the matching `rg` binary from https://github.com/microsoft/ripgrep-prebuilt/releases/tag/v15.0.0 into `node_modules/@vscode/ripgrep/bin/`, and installs Playwright's Chromium.

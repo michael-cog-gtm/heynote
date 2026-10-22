@@ -7,6 +7,10 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 RG_VERSION="v15.0.0"
+# On Windows the bare `npm`/`npx` are bash shims that break when `bash` resolves
+# to the WSL stub (Devin's non-TTY shells); the .cmd launchers always work.
+NPM=npm; NPX=npx
+case "$(uname -s)" in MINGW*|MSYS*|CYGWIN*) NPM=npm.cmd; NPX=npx.cmd ;; esac
 case "$(uname -s)-$(uname -m)" in
     Linux-x86_64)            RG_TARGET="x86_64-unknown-linux-musl";  RG_EXT="tar.gz" ;;
     Linux-aarch64|Linux-arm64) RG_TARGET="aarch64-unknown-linux-gnu"; RG_EXT="tar.gz" ;;
@@ -17,11 +21,11 @@ case "$(uname -s)-$(uname -m)" in
 esac
 
 echo "==> npm ci --ignore-scripts"
-npm ci --no-audit --no-fund --ignore-scripts
+"$NPM" ci --no-audit --no-fund --ignore-scripts
 echo "==> electron postinstall"
 node node_modules/electron/install.js
 echo "==> patch-package"
-npx patch-package
+"$NPX" patch-package
 
 RG_BIN_DIR="node_modules/@vscode/ripgrep/bin"
 RG_BIN="$RG_BIN_DIR/rg"; [ "$RG_EXT" = "zip" ] && RG_BIN="$RG_BIN.exe"
@@ -38,5 +42,5 @@ if [ ! -x "$RG_BIN" ] && [ ! -f "$RG_BIN" ]; then
     fi
 fi
 echo "==> playwright chromium"
-npx playwright install chromium
+"$NPX" playwright install chromium
 echo "==> done"
