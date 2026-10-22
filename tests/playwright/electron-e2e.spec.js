@@ -48,16 +48,19 @@ async function dirExists(path) {
     }
 }
 
-async function removeDirWithRetry(dirPath, retries = 5) {
+async function removeDirWithRetry(dirPath, retries = 10) {
+    // On Windows, Electron/Chromium can keep files (e.g. the DIPS database) locked
+    // for a short while after the process exits, which surfaces as EBUSY/EPERM.
+    const retryable = new Set(["ENOTEMPTY", "EBUSY", "EPERM"])
     for (let attempt = 0; attempt <= retries; attempt += 1) {
         try {
             await fs.rm(dirPath, { recursive: true, force: true })
             return
         } catch (err) {
-            if (err.code !== "ENOTEMPTY" || attempt === retries) {
+            if (!retryable.has(err.code) || attempt === retries) {
                 throw err
             }
-            await new Promise((resolve) => setTimeout(resolve, 100 * (attempt + 1)))
+            await new Promise((resolve) => setTimeout(resolve, 250 * (attempt + 1)))
         }
     }
 }

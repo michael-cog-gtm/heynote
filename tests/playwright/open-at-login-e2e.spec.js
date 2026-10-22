@@ -2,12 +2,17 @@ import { test, expect, _electron as electron } from '@playwright/test'
 import os from 'node:os'
 import path from 'node:path'
 import fs from 'node:fs/promises'
-import { spawn } from 'node:child_process'
+import { spawn, spawnSync } from 'node:child_process'
 
 import { HeynotePage } from "./test-utils.js"
 
 const isLinux = process.platform === 'linux'
 const supportsOpenAtLogin = process.platform === 'darwin' || process.platform === 'win32'
+
+// Skip at declaration time so beforeEach/afterEach do not launch and tear down
+// Electron for tests that cannot run on this platform.
+const loginItemTest = supportsOpenAtLogin ? test : test.skip
+const linuxOnlyTest = isLinux ? test : test.skip
 
 async function ensureElectronBuild() {
     const mainPath = path.join(process.cwd(), 'dist-electron', 'main', 'index.js')
@@ -48,16 +53,19 @@ async function dirExists(dirPath) {
     }
 }
 
-async function removeDirWithRetry(dirPath, retries = 5) {
+async function removeDirWithRetry(dirPath, retries = 10) {
+    // On Windows, Electron/Chromium can keep files (e.g. the DIPS database) locked
+    // for a short while after the process exits, which surfaces as EBUSY/EPERM.
+    const retryable = new Set(["ENOTEMPTY", "EBUSY", "EPERM"])
     for (let attempt = 0; attempt <= retries; attempt += 1) {
         try {
             await fs.rm(dirPath, { recursive: true, force: true })
             return
         } catch (err) {
-            if (err.code !== "ENOTEMPTY" || attempt === retries) {
+            if (!retryable.has(err.code) || attempt === retries) {
                 throw err
             }
-            await new Promise((resolve) => setTimeout(resolve, 100 * (attempt + 1)))
+            await new Promise((resolve) => setTimeout(resolve, 250 * (attempt + 1)))
         }
     }
 }
@@ -82,7 +90,13 @@ async function closeElectronApp(electronApp) {
 
     // Force kill if still running, then wait so the next launch cannot race
     // against late config writes from this process.
-    childProcess.kill('SIGKILL')
+    if (process.platform === 'win32') {
+        // SIGKILL only reaches the main process on Windows; renderer/GPU
+        // children keep user-data files locked, so kill the whole tree.
+        spawnSync('taskkill', ['/pid', String(childProcess.pid), '/T', '/F'], { stdio: 'ignore' })
+    } else {
+        childProcess.kill('SIGKILL')
+    }
     await Promise.race([waitForExit(), timeout(5000)])
 }
 
@@ -126,9 +140,7 @@ test.describe('openAtLogin e2e', { tag: "@e2e" }, () => {
         }
     })
 
-    test('Launch at login checkbox is visible in Electron', async () => {
-        test.skip(!supportsOpenAtLogin, 'Launch at login is supported only on macOS/Windows')
-
+    loginItemTest('Launch at login checkbox is visible in Electron', async () => {
         await expect(page).toHaveTitle(/Heynote/i)
         await page.locator("css=.status-block.settings").click()
         await expect(page.locator("css=.overlay .settings .dialog")).toBeVisible()
@@ -136,9 +148,7 @@ test.describe('openAtLogin e2e', { tag: "@e2e" }, () => {
         await expect(checkbox).toBeVisible()
     })
 
-    test('Launch at login checkbox is hidden in Electron on Linux', async () => {
-        test.skip(!isLinux, 'Linux does not use Electron login item settings')
-
+    linuxOnlyTest('Launch at login checkbox is hidden in Electron on Linux', async () => {
         await expect(page).toHaveTitle(/Heynote/i)
         await page.locator("css=.status-block.settings").click()
         await expect(page.locator("css=.overlay .settings .dialog")).toBeVisible()
@@ -146,18 +156,14 @@ test.describe('openAtLogin e2e', { tag: "@e2e" }, () => {
         await expect(checkbox).toHaveCount(0)
     })
 
-    test('Launch at login default is unchecked', async () => {
-        test.skip(!supportsOpenAtLogin, 'Launch at login is supported only on macOS/Windows')
-
+    loginItemTest('Launch at login default is unchecked', async () => {
         await page.locator("css=.status-block.settings").click()
         await expect(page.locator("css=.overlay .settings .dialog")).toBeVisible()
         const checkbox = page.getByLabel("Launch at login")
         await expect(checkbox).not.toBeChecked()
     })
 
-    test('Toggle Launch at login updates config file', async () => {
-        test.skip(!supportsOpenAtLogin, 'Launch at login is supported only on macOS/Windows')
-
+    loginItemTest('Toggle Launch at login updates config file', async () => {
         await page.locator("css=.status-block.settings").click()
         await expect(page.locator("css=.overlay .settings .dialog")).toBeVisible()
         const checkbox = page.getByLabel("Launch at login")
@@ -196,9 +202,7 @@ test.describe('openAtLogin e2e', { tag: "@e2e" }, () => {
         }).toBe(true)
     })
 
-    test('Toggle Launch at login updates Electron loginItemSettings', async () => {
-        test.skip(!supportsOpenAtLogin, 'Launch at login is supported only on macOS/Windows')
-
+    loginItemTest('Toggle Launch at login updates Electron loginItemSettings', async () => {
         await page.locator("css=.status-block.settings").click()
         await expect(page.locator("css=.overlay .settings .dialog")).toBeVisible()
         const checkbox = page.getByLabel("Launch at login")
@@ -212,9 +216,7 @@ test.describe('openAtLogin e2e', { tag: "@e2e" }, () => {
         expect(loginSettings.openAtLogin).toBe(true)
     })
 
-    test('Toggle Launch at login off resets loginItemSettings', async () => {
-        test.skip(!supportsOpenAtLogin, 'Launch at login is supported only on macOS/Windows')
-
+    loginItemTest('Toggle Launch at login off resets loginItemSettings', async () => {
         await page.locator("css=.status-block.settings").click()
         await expect(page.locator("css=.overlay .settings .dialog")).toBeVisible()
         const checkbox = page.getByLabel("Launch at login")
