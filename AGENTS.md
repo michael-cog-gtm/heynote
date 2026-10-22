@@ -8,8 +8,7 @@ Requires Node.js 24 (LTS). Run from the repo root.
 
 | Step | Command | Typical time |
 | --- | --- | --- |
-| Install deps | `npm ci` (see "Install gotcha" below) | ~40 s |
-| Install Playwright browser | `npx playwright install chromium` | ~10 s |
+| Install deps + Playwright Chromium | `bash scripts/install-deps.sh` (never plain `npm ci`, see below) | Linux ~50 s, macOS ~15 s, Windows ~2.5 min |
 | Build Electron bundles (`dist-electron/`) | `npx vite build` | ~15 s |
 | Type-check | `npx vue-tsc --noEmit` | ~5 s |
 | Unit tests (main process) | `npx vitest run` (`npm run test:main` starts watch mode) | ~2 s |
@@ -19,17 +18,11 @@ Requires Node.js 24 (LTS). Run from the repo root.
 
 Platform notes:
 - **Linux (headless VMs):** prefix Playwright commands with `xvfb-run --auto-servernum`. Electron needs `--no-sandbox` (already passed by the e2e specs). The image-paste e2e test is occasionally flaky under Xvfb; rerun it once before treating it as a failure.
-- **macOS:** run tests directly; a real Heynote window appears for Electron tests. Node via Homebrew (`brew install node@24`) if missing.
-- **Windows:** run tests directly in PowerShell or Git Bash; a real Heynote window appears. Node via `winget install OpenJS.NodeJS.LTS` if missing. Playwright's Electron project is the only one that needs a display.
+- **macOS:** run tests directly; a real Heynote window appears for Electron tests. Devin macOS machines have Node 24 via Homebrew.
+- **Windows:** run tests from Git Bash or PowerShell; a real Heynote window appears. Devin Windows machines ship Node 24 at `C:\hostedtoolcache\node\24.0.1\x64` (not on PATH; the Node 20 on PATH has a broken npm shim) — either prepend that directory to PATH or install the Node 24 LTS MSI from nodejs.org with `msiexec /i <file> /qn /norestart` **from PowerShell** (from Git Bash the flags get mangled and msiexec hangs). `winget` is not available. Use PowerShell for process management (`Stop-Process -Name electron -Force`).
 
-### Install gotcha (Devin VMs / shared egress IPs)
-`@vscode/ripgrep`'s postinstall downloads a binary via the GitHub API and fails with HTTP 403 when the IP is rate-limited. If `npm ci` fails there:
-```
-npm ci --ignore-scripts
-node node_modules/electron/install.js
-npx patch-package
-```
-then download `ripgrep-v15.0.0-<target>.{tar.gz|zip}` from https://github.com/microsoft/ripgrep-prebuilt/releases/tag/v15.0.0 and unpack the `rg` binary into `node_modules/@vscode/ripgrep/bin/` (`rg.exe` on Windows). Targets: `x86_64-unknown-linux-musl`, `aarch64-apple-darwin`, `x86_64-apple-darwin`, `x86_64-pc-windows-msvc`.
+### Install gotcha (why not plain `npm ci`)
+`@vscode/ripgrep`'s postinstall downloads a binary via the GitHub API and fails with HTTP 403 from rate-limited/shared IPs (Devin VMs); plain `npm ci` then retries for ~20 minutes before failing. `scripts/install-deps.sh` does the equivalent safely on all three platforms: `npm ci --ignore-scripts`, `node node_modules/electron/install.js`, `npx patch-package`, fetches the matching `rg` binary from https://github.com/microsoft/ripgrep-prebuilt/releases/tag/v15.0.0 into `node_modules/@vscode/ripgrep/bin/`, and installs Playwright's Chromium.
 
 ## Where the tests live
 - `tests/playwright/*-e2e.spec.js` — Electron end-to-end tests (tag `@e2e`, Playwright project `electron`). They launch the real app via `tests/playwright/electron-runner.cjs` with a temporary user-data dir (`HEYNOTE_TEST_USER_DATA_DIR`).
