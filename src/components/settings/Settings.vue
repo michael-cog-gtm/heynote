@@ -274,7 +274,7 @@
                                     />
                                     Always on top
                                 </label>
-                                <label v-if="!isLinux">
+                                <label v-if="isMac">
                                     <input
                                         type="checkbox"
                                         v-model="openAtLogin"
