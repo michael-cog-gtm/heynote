@@ -66,6 +66,9 @@ export default defineConfig({
         {
             name: 'electron',
             workers: 1,
+            // The clipboard/image-paste test depends on window focus and is
+            // occasionally flaky on macOS/Linux desktops; retry once.
+            retries: 1,
             testMatch: ELECTRON_E2E_SPECS,
             use: { ...devices['Desktop Chrome'] },
         },
