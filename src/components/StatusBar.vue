@@ -106,13 +106,14 @@
 
 <template>
     <div :class="className">
-        <div 
+        <button type="button"
             @click.stop="$emit('toggleLeftPanel')"
             class="status-block sidebar clickable"
+            aria-label="Toggle sidebar"
             :title="getTooltip('Toggle Sidebar', 'toggleLeftPanel')"
         >
             <span class="icon icon-format"></span>
-        </div>
+        </button>
         <div class="status-block line-number">
             Ln <span class="num">{{ currentCursorLine?.line }}</span>
             Col <span class="num">{{ currentCursorLine?.col }}</span>
@@ -127,68 +128,74 @@
             {{ formattedCreatedTime }}
         </div>
         <div class="spacer"></div>
-        <div 
+        <button type="button"
             @click.stop="$emit('openBufferSelector')"
             class="status-block note clickable"
-            :title="getTooltip('Change Buffer', 'openBufferSelector')"
+            :title="getTooltip(currentBufferName + ' — Change Buffer', 'openBufferSelector')"
         >
             {{ currentBufferName }} 
-        </div>
-        <div 
+        </button>
+        <button type="button"
             @click.stop="$emit('openLanguageSelector')"
             class="status-block lang clickable"
             :title="getTooltip('Change language for current block', 'openLanguageSelector')"
         >
             {{ languageName }} 
             <span v-if="currentLanguageAuto" class="auto">(auto)</span>
-        </div>
-        <div 
+        </button>
+        <button type="button"
             v-if="supportsFormat"
             @click.stop="$emit('formatCurrentBlock')"
             class="status-block format clickable"
+            aria-label="Format block content"
             :title="getTooltip('Format Block Content', 'formatBlockContent')"
         >
             <span class="icon icon-format"></span>
-        </div>
-        <div 
+        </button>
+        <button type="button"
             @click.stop="$emit('toggleSpellcheck')"
             @mousedown.prevent
             @contextmenu="onSpellcheckingContextMenu"
             :class="'status-block spellcheck clickable' + (this.spellcheckEnabled ? ' spellcheck-enabled' : '')"
+            aria-label="Spellchecking"
+            :aria-pressed="spellcheckEnabled"
             :title="getTooltip('Spellchecking', 'toggleSpellcheck')"
         >
             <span class="icon icon-format"></span>
-        </div>
+        </button>
 
-        <div 
+        <button type="button"
             v-if="!isWebApp"
             @click.stop="$emit('toggleAlwaysOnTop')"
             @mousedown.prevent
             class="status-block pin clickable"
+            aria-label="Always on top"
+            :aria-pressed="alwaysOnTop"
             :title="getTooltip('Pin', 'toggleAlwaysOnTop')"
         >
             <span class="icon icon-format" :class="{'pinned': alwaysOnTop}"></span>
-        </div>
+        </button>
 
         <UpdateStatusItem 
             v-if="updatesEnabled" 
             :autoUpdate="autoUpdate"
             :allowBetaVersions="allowBetaVersions"
         />
-        <div 
+        <button type="button"
             @click.stop="$emit('openSettings')"
             class="status-block settings clickable"
+            aria-label="Settings"
             title="Settings"
         >
             <span class="icon icon-format"></span>
-        </div>
+        </button>
     </div>
 </template>
 
 <style scoped lang="sass">
     .status
         box-sizing: border-box
-        height: 22px
+        height: var(--status-bar-height)
         width: 100%
         background: var(--status-bar-background)
         color: var(--status-bar-color)
@@ -205,11 +212,19 @@
 
         .spacer
             flex-grow: 1
+            min-width: 0
         
         .status-block
             box-sizing: border-box
-            height: 22px
-            padding: 4px 10px
+            height: var(--status-bar-height)
+            padding: 0 10px
+            flex-shrink: 0
+            border: none
+            border-radius: 0
+            background: none
+            color: inherit
+            font: inherit
+            line-height: var(--status-bar-height)
             cursor: default
             &:first-child
                 padding-left: 12px
@@ -217,12 +232,15 @@
                 padding-right: 12px
             &.clickable
                 cursor: pointer
+                &:focus-visible
+                    outline: 2px solid #93c5fd
+                    outline-offset: -3px
                 &:hover
                     background-color: rgba(255,255,255, 0.1)
             .icon
                 display: block
                 width: 14px
-                height: 22px
+                height: var(--status-bar-height)
                 +dark-mode
                     opacity: 0.9
         .line-number
@@ -237,6 +255,24 @@
             color: rgba(255, 255, 255, 0.7)
             +dark-mode
                 color: rgba(255, 255, 255, 0.55)
+
+        .note, .lang
+            min-width: 0
+            overflow: hidden
+            text-overflow: ellipsis
+            white-space: nowrap
+            flex-shrink: 1
+        .note
+            max-width: 35%
+        .lang
+            max-width: 28%
+
+        @media (max-width: 700px)
+            .created-time
+                display: none
+        @media (max-width: 420px)
+            .line-number
+                display: none
         
         .sidebar
             padding-top: 0

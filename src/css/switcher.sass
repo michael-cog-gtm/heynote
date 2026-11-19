@@ -1,0 +1,90 @@
+.switcher
+    position: absolute
+    top: 16px
+    left: 50%
+    transform: translateX(-50%)
+    z-index: 400
+    display: flex
+    flex-direction: column
+    box-sizing: border-box
+    width: min(560px, calc(100% - 24px))
+    max-height: calc(100% - 32px)
+    border: 1px solid var(--ui-border)
+    border-radius: 12px
+    background: var(--ui-surface)
+    color: var(--ui-text)
+    box-shadow: var(--ui-shadow)
+    font-family: var(--system-font)
+    font-size: 13px
+    overflow: hidden
+
+    .switcher-header
+        padding: 16px 16px 12px
+        flex-shrink: 0
+        label
+            display: block
+            font-size: 14px
+            font-weight: 600
+            margin-bottom: 10px
+
+    .switcher-input
+        box-sizing: border-box
+        width: 100%
+        padding: 10px 12px
+        border: 1px solid var(--ui-border)
+        border-radius: 7px
+        background: var(--ui-input)
+        color: var(--ui-text)
+        font: inherit
+        &::placeholder
+            color: var(--ui-muted)
+        &:focus
+            outline: 2px solid var(--ui-accent)
+            outline-offset: 2px
+
+    .switcher-results
+        min-height: 0
+        overflow-y: auto
+        overscroll-behavior: contain
+        padding: 4px 8px 8px
+
+    .switcher-item
+        box-sizing: border-box
+        min-height: 36px
+        padding: 8px 10px
+        line-height: 20px
+        border-radius: 6px
+        cursor: pointer
+        scroll-margin-block: 4px
+        &:hover
+            background: var(--ui-hover)
+        &.selected
+            background: var(--ui-accent-soft)
+            color: var(--ui-text)
+            box-shadow: inset 3px 0 var(--ui-accent)
+
+    .switcher-empty
+        padding: 24px 16px
+        text-align: center
+        color: var(--ui-muted)
+        line-height: 1.6
+
+    .switcher-footer
+        flex-shrink: 0
+        display: flex
+        flex-wrap: wrap
+        gap: 6px 16px
+        padding: 10px 16px
+        border-top: 1px solid var(--ui-border)
+        color: var(--ui-muted)
+        font-size: 11px
+        line-height: 18px
+        kbd
+            font-family: inherit
+            font-weight: 600
+            color: var(--ui-text)
+            margin-right: 3px
+
+    @media (max-width: 600px)
+        .switcher-input
+            font-size: 16px

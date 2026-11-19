@@ -828,4 +828,6 @@
     .name
         display: block
         position: relative
+        overflow: hidden
+        text-overflow: ellipsis
 </style>
