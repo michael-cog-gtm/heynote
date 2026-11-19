@@ -110,6 +110,9 @@ test.describe('electron app', { tag: "@e2e" }, () => {
 
     test('uses temp user data and notes library', async () => {
         await expect(page).toHaveTitle(/Heynote/i)
+        await expect(page.locator(".cm-content")).toBeFocused()
+        await page.reload()
+        await expect(page.locator(".cm-content")).toBeFocused()
 
         const userData = await electronApp.evaluate(({ app }) => app.getPath('userData'))
         const notesDir = path.join(userData, 'notes')
