@@ -20,14 +20,14 @@ async function ensureElectronBuild() {
 }
 
 async function launchApp(userDataDir) {
-    const electronApp = await electron.launch({
+    const app = await electron.launch({
         args: ["--no-sandbox", "tests/playwright/electron-runner.cjs"],
         env: { ...process.env, HEYNOTE_TEST_USER_DATA_DIR: userDataDir },
     })
-    const page = await electronApp.firstWindow()
+    const page = await app.firstWindow()
     await page.waitForLoadState("domcontentloaded")
     await expect(page.locator(".cm-editor")).toBeVisible()
-    return { electronApp, page }
+    return { app, page }
 }
 
 async function closeElectronApp(electronApp) {
@@ -83,8 +83,9 @@ test.describe("settings tab e2e", { tag: "@e2e" }, () => {
         const userDataDir = path.join(tmpRoot, "user-data")
         await fs.mkdir(userDataDir)
 
-        let page
-        ;({ electronApp, page } = await launchApp(userDataDir))
+        let launched = await launchApp(userDataDir)
+        electronApp = launched.app
+        let page = launched.page
 
         await page.locator("css=.status-block.settings").click()
         await expect(page.locator("css=.settings .tab-content.tab-general")).toBeVisible()
@@ -107,7 +108,9 @@ test.describe("settings tab e2e", { tag: "@e2e" }, () => {
         }).toBe("keyboard-bindings")
 
         await closeElectronApp(electronApp)
-        ;({ electronApp, page } = await launchApp(userDataDir))
+        launched = await launchApp(userDataDir)
+        electronApp = launched.app
+        page = launched.page
 
         await page.locator("css=.status-block.settings").click()
         await expect(page.locator("css=.settings .tab-content.tab-keyboard-bindings")).toBeVisible()
@@ -123,8 +126,9 @@ test.describe("settings tab e2e", { tag: "@e2e" }, () => {
         await fs.mkdir(userDataDir)
         await fs.writeFile(path.join(userDataDir, "config.json"), JSON.stringify({ settings: { settingsTab: "no-such-tab" } }))
 
-        let page
-        ;({ electronApp, page } = await launchApp(userDataDir))
+        let launched = await launchApp(userDataDir)
+        electronApp = launched.app
+        let page = launched.page
 
         await page.locator("css=.status-block.settings").click()
         await expect(page.locator("css=.settings .tab-content.tab-general")).toBeVisible()
