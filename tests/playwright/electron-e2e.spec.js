@@ -136,24 +136,32 @@ test.describe('electron app', { tag: "@e2e" }, () => {
     })
 
     test('activation restores editor focus only when revealing a hidden window', async () => {
+        test.skip(process.platform !== "darwin", "macOS application hide/show")
         await expect(page.locator(".cm-content")).toBeFocused()
-        const scroller = page.locator(".tab-bar .scroller")
+        const scroller = page.locator("nav .scroller")
         await scroller.focus()
         await expect(scroller).toBeFocused()
 
-        await electronApp.evaluate(({ app }) => app.emit("did-become-active"))
+        await electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].blur())
+        await expect.poll(() => electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].isFocused())).toBe(false)
+        await electronApp.evaluate(({ app, BrowserWindow }) => {
+            app.focus({ steal: true })
+            BrowserWindow.getAllWindows()[0].focus()
+        })
+        await expect.poll(() => electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].isFocused())).toBe(true)
         await expect(scroller).toBeFocused()
 
-        await electronApp.evaluate(({ app, BrowserWindow }) => {
-            const win = BrowserWindow.getAllWindows()[0]
-            win.hide()
-            app.emit("did-become-active")
-            app.emit("activate")
-        })
-        await expect.poll(() => electronApp.evaluate(({ BrowserWindow }) => {
-            return BrowserWindow.getAllWindows()[0].isVisible()
-        })).toBe(true)
-        await expect(page.locator(".cm-content")).toBeFocused()
+        for (const target of [scroller, page.locator(".buffer-tree")]) {
+            await target.focus()
+            await expect(target).toBeFocused()
+            await electronApp.evaluate(({ app }) => app.hide())
+            await expect.poll(() => electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].isVisible())).toBe(false)
+            await electronApp.evaluate(({ app }) => {
+                app.show()
+                app.focus({ steal: true })
+            })
+            await expect.poll(() => page.evaluate(() => !!document.activeElement?.closest(".cm-content"))).toBe(true)
+        }
     })
 
     test('buffer is saved to disk', async () => {

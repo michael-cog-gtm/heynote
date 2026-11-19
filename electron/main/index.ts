@@ -255,13 +255,21 @@ async function createWindow() {
         }
     })
 
+    let wasHidden = false
     win.on("hide", () => {
+        if (isMac) {
+            wasHidden = true
+        }
         if (isWindows && CONFIG.get("settings.showInMenu")) {
             win.setSkipTaskbar(true)
         }
     })
 
     win.on("show", () => {
+        if (isMac && wasHidden) {
+            wasHidden = false
+            win.webContents.send(FOCUS_EDITOR_EVENT)
+        }
         if (isWindows && CONFIG.get("settings.showInMenu")) {
             win.setSkipTaskbar(false)
         }
@@ -287,7 +295,8 @@ async function createWindow() {
     // without this, there are cases when Cmd-Tabbing to Heynote won't show the window
     app.on("did-become-active", (event) => {
         if (!win.isVisible()) {
-            showWindow()
+            ensureWindowVisible()
+            win.show()
         }
     })
 
