@@ -47,6 +47,14 @@
         },
 
         computed: {
+            isCommandMode() {
+                return this.commandsEnabled && this.filter.startsWith(">")
+            },
+
+            selectorTitle() {
+                return this.headline || (this.isCommandMode ? "Command palette" : "Switch buffer")
+            },
+
             ...mapState(useHeynoteStore, [
                 "buffers",
                 "recentBufferPaths",
@@ -101,7 +109,7 @@
             },
 
             filteredItems() {
-                if (this.commandsEnabled && this.filter.startsWith(">")) {
+                if (this.isCommandMode) {
                     // command mode if the first character is ">"
                     if (this.filter.length < 2) {
                         return this.commands
@@ -247,6 +255,7 @@
             onInput(event) {
                 // reset selection
                 this.selected = 0
+                this.hideActionButtons()
             },
 
             onFocusOut(event) {
@@ -259,6 +268,7 @@
             getItemClass(item, idx) {
                 return {
                     "item": true,
+                    "switcher-item": true,
                     "selected": idx === this.selected,
                     "action-buttons-visible": this.actionButton > 0,
                     "scratch": item.scratch,
@@ -297,11 +307,14 @@
 </script>
 
 <template>
-    <form class="note-selector" tabindex="-1" @focusout="onFocusOut" ref="container" @submit.prevent>
-        <div class="input-container">
-            <h1 v-if="headline">{{headline}}</h1>
+    <form class="note-selector switcher" tabindex="-1" @focusout="onFocusOut" ref="container" @submit.prevent>
+        <div class="input-container switcher-header">
+            <label for="buffer-filter">{{ selectorTitle }}</label>
             <input 
+                id="buffer-filter"
+                class="switcher-input"
                 type="text" 
+                :placeholder="isCommandMode ? 'Search commands…' : 'Search buffers…'"
                 ref="input"
                 @keydown="onKeydown"
                 @input="onInput"
@@ -310,11 +323,14 @@
                 spellcheck="false"
             />
         </div>
-        <div class="scroller">
+        <div class="scroller switcher-results">
             <ul class="items" ref="itemsContainer">
+                <li v-if="filteredItems.length === 0" class="switcher-empty" role="status">
+                    No commands found. Try a different search.
+                </li>
                 <template 
                     v-for="item, idx in filteredItems"
-                    :key="item.path"
+                    :key="item.path || item.cmd || 'create-new'"
                 >
                     <li v-if="item.createNew" class="line-separator"></li>
                     <li
@@ -354,6 +370,8 @@
                             </button>
                             <button
                                 class="show-actions"
+                                aria-label="Buffer actions"
+                                title="Buffer actions"
                                 v-if="itemHasActionButtons(item) && (actionButton === 0 || idx !== selected)"
                                 @click.stop.prevent="showActionButtons(idx)"
                             ></button>
@@ -362,208 +380,99 @@
                 </template>
             </ul>
         </div>
+        <div class="switcher-footer">
+            <span><kbd>↑ ↓</kbd> Navigate</span>
+            <span><kbd>Enter</kbd> Select</span>
+            <span><kbd>Esc</kbd> Close</span>
+            <span v-if="commandsEnabled && !isCommandMode"><kbd>&gt;</kbd> Commands</span>
+        </div>
     </form>
 </template>
 
 <style scoped lang="sass">
-    .note-selector
-        font-size: 13px
-        background: #efefef
-        position: absolute
-        top: 0
-        left: 50%
-        width: 480px
-        transform: translateX(-50%)
-        max-height: 100%
-        box-sizing: border-box
-        display: flex
-        flex-direction: column
-        border-radius: 0 0 5px 5px
-        box-shadow: 0 0 10px rgba(0,0,0,0.3)
-        z-index: 400 // above the search panel which have z-index 300
-        +dark-mode
-            background: #151516
-            box-shadow: 0 0 10px rgba(0,0,0,0.5)
-            color: rgba(255,255,255, 0.7)
-        +webapp-mobile
-            max-width: calc(100% - 80px)
-
-        .input-container
-            padding: 10px
-            h1
-                font-weight: bold
-                margin-bottom: 14px
-            input
-                background: #fff
-                padding: 4px 5px
-                border: 1px solid #ccc
-                box-sizing: border-box
-                border-radius: 2px
-                width: 100%
-                &:focus
-                    outline: none
-                    border: 1px solid #fff
-                    outline: 2px solid #48b57e
-                +dark-mode
-                    background: #3b3b3b
-                    color: rgba(255,255,255, 0.9)
-                    border: 1px solid #5a5a5a
-                    &:focus
-                        border: 1px solid #3b3b3b
-                +webapp-mobile
-                    font-size: 16px
-                    max-width: 100%
-        
-        .scroller
-            overflow-y: auto
-            padding: 0 10px 5px 10px
-        
-        .items
-            > li.line-separator
-                height: 1px
-                background: rgba(0,0,0, 0.05)
-                margin-left: -10px
-                margin-right: -10px
-                margin-top: 3px
-                margin-bottom: 3px
-                +dark-mode
-                    background: rgba(255,255,255, 0.1)
-            > li.item
-                position: relative
-                border-radius: 3px
-                padding: 3px 12px
-                line-height: 18px
+    .items
+        > li.line-separator
+            height: 1px
+            background: var(--ui-border)
+            margin: 5px 2px
+        > li.item
+            position: relative
+            display: flex
+            align-items: center
+            gap: 10px
+            &.scratch
+                font-weight: 600
+            &.command .name
+                flex-grow: 1
+            .name, .path, .bindings
+                min-width: 0
+                overflow: hidden
+                text-overflow: ellipsis
+                white-space: nowrap
+            .name
+                flex-shrink: 1
+                :deep(b)
+                    font-weight: 700
+            .path, .bindings
+                color: var(--ui-muted)
+                font-size: 11px
+                :deep(b)
+                    font-weight: 700
+            .bindings
+                flex-shrink: 0
+                max-width: 45%
+                .binding
+                    display: inline-block
+                    padding: 0 5px
+                    border: 1px solid var(--ui-border)
+                    border-radius: 4px
+                    margin-right: 4px
+                .more
+                    font-style: italic
+            &:hover .action-buttons,
+            &.selected .action-buttons,
+            &:focus-within .action-buttons
                 display: flex
-                align-items: center
-                scroll-margin-top: 6px
-                scroll-margin-bottom: 6px
-                cursor: pointer
-                &:hover
-                    background: #e2e2e2
-                    .action-buttons .show-actions
-                        display: inline-block
+            &.selected.action-buttons-visible
+                padding-right: 150px
+            .action-buttons
+                display: none
+                position: absolute
+                right: 4px
+                top: 4px
+                height: 28px
+                gap: 4px
+                background: var(--ui-surface)
+                border-radius: 4px
+                &.visible
+                    display: flex
+                button
+                    border: none
+                    border-radius: 4px
+                    background: var(--ui-hover)
+                    color: var(--ui-text)
+                    padding: 0 10px
+                    font: inherit
+                    font-size: 12px
+                    cursor: pointer
+                    &:focus-visible
+                        outline: 2px solid var(--ui-accent)
+                        outline-offset: 1px
+                    &.selected
+                        background: var(--ui-accent-soft)
+                        box-shadow: inset 0 0 0 1px var(--ui-accent)
+                    &.delete
+                        color: #b91c1c
+                        +dark-mode
+                            color: #fca5a5
+                    &.confirm
+                        font-weight: 600
+                    &.show-actions
+                        width: 28px
                         background-image: url(@/assets/icons/arrow-right-black.svg)
-                    &.selected .action-buttons .show-actions
-                        background-image: url(@/assets/icons/arrow-right-white.svg)
-                +dark-mode
-                    color: rgba(255,255,255, 0.65)
-                    &:hover
-                        background: #29292a
-                    .action-buttons button
-                        color: #fff
-                &.selected
-                    background: #48b57e
-                    color: #fff
-                    &.action-buttons-visible
-                        background: none
-                        border: 1px solid #48b57e
-                        padding: 2px 11px
-                        color: #444
-                    .action-buttons .show-actions
-                        display: inline-block
-                    +dark-mode
-                        background: #1b6540
-                        color: rgba(255,255,255, 0.87)
-                        &.action-buttons-visible
-                            background: none
-                            border: 1px solid #1b6540
-                            color: rgba(255,255,255, 0.65)
-                &.scratch
-                    font-weight: 600
-                &.new-note
-                    //font-size: 12px
-                &.command
-                    .name
-                        flex-grow: 1
-                .name
-                    max-width: 100%
-                    margin-right: 12px
-                    flex-shrink: 0
-                    overflow: hidden
-                    text-overflow: ellipsis
-                    text-wrap: nowrap
-                    ::v-deep(b)
-                        font-weight: 700
-                .path
-                    opacity: 0.6
-                    font-size: 12px
-                    flex-shrink: 1
-                    overflow: hidden
-                    text-overflow: ellipsis
-                    text-wrap: nowrap
-                    ::v-deep(b)
-                        font-weight: 700
-                .bindings
-                    opacity: 0.6
-                    font-size: 12px
-                    flex-shrink: 1
-                    overflow: hidden
-                    text-overflow: ellipsis
-                    text-wrap: nowrap
-                    .binding
-                        display: inline-block
-                        margin-right: 10px
-                        &:last-child
-                            margin-right: 0
-                    .more
-                        font-style: italic
-                    
-                .action-buttons
-                    position: absolute
-                    top: 1px
-                    right: 0px
-                    padding: 0 1px
-                    &.visible
-                        background: #efefef
+                        background-position: center
+                        background-repeat: no-repeat
+                        background-size: 18px
                         +dark-mode
-                            background: #151516
-                    button
-                        padding: 0 10px
-                        height: 20px
-                        font-size: 12px
-                        background: none
-                        border: none
-                        border-radius: 2px
-                        margin-right: 2px
-                        cursor: pointer
-                        &:last-child
-                            margin-right: 0
-                        &:hover
-                            background: rgba(0,0,0, 0.1)
-                        +dark-mode
-                            &:hover
-                                background-color: rgba(255,255,255, 0.1)
-                        &.selected
-                            background: #48b57e
-                            color: #fff
-                            &:hover
-                                background: #3ea471
-                            &.delete
-                                background: #e95050
-                                &:hover
-                                    background: #ce4848
-                            +dark-mode
-                                background: #1b6540
-                                &:hover
-                                    background: #1f7449
-                                &.delete
-                                    background: #ae1e1e
-                                    &:hover
-                                        background: #bf2222
-                            &.confirm
-                                font-weight: 600
-                        &.show-actions
-                            display: none
-                            position: relative
-                            top: 1px
-                            padding: 1px 8px
-                            //cursor: default
                             background-image: url(@/assets/icons/arrow-right-white.svg)
-                            width: 22px
-                            height: 19px
-                            background-size: 19px
-                            background-position: center center
-                            background-repeat: no-repeat
-                            +dark-mode
-                                background-image: url(@/assets/icons/arrow-right-grey.svg)
 </style>

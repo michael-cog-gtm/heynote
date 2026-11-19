@@ -256,29 +256,40 @@ const HEYNOTE_COMMANDS = {
 }
 
 // selection mark-mode:ify all cursor/select commands from CodeMirror
-for (let commandSuffix of [
-    "CharLeft", "CharRight",
-    "CharBackward", "CharForward",
-    "LineUp", "LineDown",
-    "LineStart", "LineEnd",
-    "GroupLeft", "GroupRight",
-    "GroupForward", "GroupBackward",
-    "PageUp", "PageDown",
-    "SyntaxLeft", "SyntaxRight",
-    "SubwordBackward", "SubwordForward",
-    "LineBoundaryBackward", "LineBoundaryForward",
-    "DocStart", "DocEnd",
-]) {
+for (const [commandSuffix, direction] of Object.entries({
+    CharLeft: "one character left",
+    CharRight: "one character right",
+    CharBackward: "one character backward",
+    CharForward: "one character forward",
+    LineUp: "one line up",
+    LineDown: "one line down",
+    LineStart: "to line start",
+    LineEnd: "to line end",
+    GroupLeft: "one word left",
+    GroupRight: "one word right",
+    GroupForward: "one word forward",
+    GroupBackward: "one word backward",
+    PageUp: "one page up",
+    PageDown: "one page down",
+    SyntaxLeft: "to previous syntax element",
+    SyntaxRight: "to next syntax element",
+    SubwordBackward: "one subword backward",
+    SubwordForward: "one subword forward",
+    LineBoundaryBackward: "to previous line boundary",
+    LineBoundaryForward: "to next line boundary",
+    DocStart: "to document start",
+    DocEnd: "to document end",
+})) {
     HEYNOTE_COMMANDS[`cursor${commandSuffix}`] = {
         run: markModeMoveCommand(codeMirrorCommands[`cursor${commandSuffix}`], codeMirrorCommands[`select${commandSuffix}`]),
         name: `cursor${commandSuffix}`,
-        description: `cursor${commandSuffix}`,
+        description: `Move cursor ${direction}`,
         category: "Cursor",
     }
     HEYNOTE_COMMANDS[`select${commandSuffix}`] = {
         run: (editor) => codeMirrorCommands[`select${commandSuffix}`],
         name: `select${commandSuffix}`,
-        description: `select${commandSuffix}`,
+        description: `Extend selection ${direction}`,
         category: "Cursor",
     }
 }
