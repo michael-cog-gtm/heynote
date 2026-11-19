@@ -8,6 +8,8 @@ import { FileLibrary } from '../../electron/main/file-library'
 import { HeynotePage } from "./test-utils.js"
 import { parseImagesFromString } from "../../src/editor/image/image-parsing.js"
 
+const macOnlyTest = process.platform === "darwin" ? test : test.skip
+
 
 async function ensureElectronBuild() {
     const mainPath = path.join(process.cwd(), 'dist-electron', 'main', 'index.js')
@@ -110,6 +112,9 @@ test.describe('electron app', { tag: "@e2e" }, () => {
 
     test('uses temp user data and notes library', async () => {
         await expect(page).toHaveTitle(/Heynote/i)
+        await expect(page.locator(".cm-content")).toBeFocused()
+        await page.reload()
+        await expect(page.locator(".cm-content")).toBeFocused()
 
         const userData = await electronApp.evaluate(({ app }) => app.getPath('userData'))
         const notesDir = path.join(userData, 'notes')
@@ -130,6 +135,34 @@ test.describe('electron app', { tag: "@e2e" }, () => {
         expect(userData).toBe(userDataDir)
         expect(configPath.startsWith(userDataDir)).toBe(true)
         expect(notesDir.startsWith(userDataDir)).toBe(true)
+    })
+
+    macOnlyTest('activation restores editor focus only when revealing a hidden window', async () => {
+        await expect(page.locator(".cm-content")).toBeFocused()
+        const scroller = page.locator("nav .scroller")
+        await scroller.focus()
+        await expect(scroller).toBeFocused()
+
+        await electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].blur())
+        await expect.poll(() => electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].isFocused())).toBe(false)
+        await electronApp.evaluate(({ app, BrowserWindow }) => {
+            app.focus({ steal: true })
+            BrowserWindow.getAllWindows()[0].focus()
+        })
+        await expect.poll(() => electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].isFocused())).toBe(true)
+        await expect(scroller).toBeFocused()
+
+        for (const target of [scroller, page.locator(".buffer-tree")]) {
+            await target.focus()
+            await expect(target).toBeFocused()
+            await electronApp.evaluate(({ app }) => app.hide())
+            await expect.poll(() => electronApp.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].isVisible())).toBe(false)
+            await electronApp.evaluate(({ app }) => {
+                app.show()
+                app.focus({ steal: true })
+            })
+            await expect.poll(() => page.evaluate(() => !!document.activeElement?.closest(".cm-content"))).toBe(true)
+        }
     })
 
     test('buffer is saved to disk', async () => {

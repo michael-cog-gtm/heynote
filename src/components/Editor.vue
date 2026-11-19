@@ -157,6 +157,13 @@
 
                 this.currentEditor = toRaw(this.editor)
                 window._heynote_editor = toRaw(this.editor)
+                if (created && focusEditor) {
+                    this.$nextTick(() => {
+                        if (toRaw(this.editor) === toRaw(editor) && !this.$el.closest("[inert]")) {
+                            toRaw(editor).focus()
+                        }
+                    })
+                }
             },
 
             setLanguage(language) {
