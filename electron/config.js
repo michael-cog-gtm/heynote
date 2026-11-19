@@ -80,6 +80,7 @@ const schema = {
             "showWhitespace": {type:"boolean", default:false},
             "colorPreviewEnabled": {type: "boolean", default: true},
             "cursorBlinkRate": {type: "integer", default: 1000},
+            "settingsTab": {"enum": ["general", "editing", "appearance", "keyboard-bindings", "updates"]},
             "drawSettings": {
                 type: "object",
                 properties: {
