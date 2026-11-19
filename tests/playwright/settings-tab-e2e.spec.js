@@ -114,4 +114,20 @@ test.describe('settings tab e2e', { tag: "@e2e" }, () => {
         await expect(page.locator("css=.overlay .settings .dialog .sidebar li.tab-keyboard-bindings")).toHaveClass(/active/)
         await page.screenshot({ path: path.join('test-results', 'settings-tab-after-restart.png') })
     })
+
+    test('Settings falls back to the first tab when config.json has an unknown tab', async () => {
+        test.setTimeout(60000)
+        await ensureElectronBuild()
+        tmpRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'heynote-e2e-settings-tab-'))
+        const userDataDir = path.join(tmpRoot, 'user-data')
+        await fs.mkdir(userDataDir)
+        await fs.writeFile(path.join(userDataDir, 'config.json'), JSON.stringify({ settings: { settingsTab: 'no-such-tab' } }))
+
+        let page
+        ;({ electronApp, page } = await launchApp(userDataDir))
+
+        await page.locator("css=.status-block.settings").click()
+        await expect(page.locator("css=.settings .tab-content.tab-general")).toBeVisible()
+        await expect(page.locator("css=.overlay .settings .dialog .sidebar li.tab-general")).toHaveClass(/active/)
+    })
 })
