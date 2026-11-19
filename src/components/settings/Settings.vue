@@ -14,6 +14,7 @@
     const defaultFontSize = window.heynote.defaultFontSize
     const defaultDefaultBlockLanguage = "text"
     const defaultDefaultBlockLanguageAutoDetect = true
+    const settingsTabs = ["general", "editing", "appearance", "keyboard-bindings", "updates"]
     
     export default {
         props: {
@@ -75,7 +76,7 @@
                 defaultBlockLanguage: this.initialSettings.defaultBlockLanguage || defaultDefaultBlockLanguage,
                 defaultBlockLanguageAutoDetect: this.initialSettings.defaultBlockLanguageAutoDetect === false ? false : defaultDefaultBlockLanguageAutoDetect,
 
-                activeTab: "general",
+                activeTab: settingsTabs.includes(this.initialSettings.settingsTab) ? this.initialSettings.settingsTab : "general",
                 isWebApp: window.heynote.platform.isWebApp,
                 customBufferLocation: !!this.initialSettings.bufferPath,
                 systemFonts: [[defaultFontFamily, defaultFontFamily + " (default)"]],
@@ -114,6 +115,13 @@
         },
 
         methods: {
+            selectTab(tab) {
+                this.activeTab = tab
+                if (this.settingsStore.settings.settingsTab !== tab) {
+                    this.settingsStore.updateSettings({settingsTab: tab})
+                }
+            },
+
             onKeyDown(event) {
                 if (event.key === "Escape" && !this.addKeyBindingDialogVisible) {
                     this.$emit("closeSettings")
@@ -154,6 +162,7 @@
                     cursorBlinkRate: this.cursorBlinkRate,
                     defaultBlockLanguage: this.defaultBlockLanguage === "text" ? undefined : this.defaultBlockLanguage,
                     defaultBlockLanguageAutoDetect: this.defaultBlockLanguageAutoDetect === true ? undefined : this.defaultBlockLanguageAutoDetect,
+                    settingsTab: this.activeTab,
                 })
                 if (!this.showInDock) {
                     this.showInMenu = true
@@ -192,31 +201,31 @@
                             name="General" 
                             tab="general" 
                             :activeTab="activeTab" 
-                            @click="activeTab = 'general'"
+                            @click="selectTab('general')"
                         />
                         <TabListItem 
                             name="Editing" 
                             tab="editing"
                             :activeTab="activeTab" 
-                            @click="activeTab = 'editing'"
+                            @click="selectTab('editing')"
                         />
                         <TabListItem 
                             name="Appearance" 
                             tab="appearance"
                             :activeTab="activeTab" 
-                            @click="activeTab = 'appearance'"
+                            @click="selectTab('appearance')"
                         />
                         <TabListItem 
                             name="Key Bindings" 
                             tab="keyboard-bindings" 
                             :activeTab="activeTab" 
-                            @click="activeTab = 'keyboard-bindings'"
+                            @click="selectTab('keyboard-bindings')"
                         />
                         <TabListItem 
                             :name="isWebApp ? 'Version' : 'Updates'" 
                             tab="updates" 
                             :activeTab="activeTab" 
-                            @click="activeTab = 'updates'"
+                            @click="selectTab('updates')"
                         />
                     </ul>
                 </nav>
