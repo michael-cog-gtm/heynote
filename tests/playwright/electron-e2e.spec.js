@@ -8,6 +8,8 @@ import { FileLibrary } from '../../electron/main/file-library'
 import { HeynotePage } from "./test-utils.js"
 import { parseImagesFromString } from "../../src/editor/image/image-parsing.js"
 
+const macOnlyTest = process.platform === "darwin" ? test : test.skip
+
 
 async function ensureElectronBuild() {
     const mainPath = path.join(process.cwd(), 'dist-electron', 'main', 'index.js')
@@ -135,8 +137,7 @@ test.describe('electron app', { tag: "@e2e" }, () => {
         expect(notesDir.startsWith(userDataDir)).toBe(true)
     })
 
-    test('activation restores editor focus only when revealing a hidden window', async () => {
-        test.skip(process.platform !== "darwin", "macOS application hide/show")
+    macOnlyTest('activation restores editor focus only when revealing a hidden window', async () => {
         await expect(page.locator(".cm-content")).toBeFocused()
         const scroller = page.locator("nav .scroller")
         await scroller.focus()
