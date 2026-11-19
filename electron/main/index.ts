@@ -287,8 +287,7 @@ async function createWindow() {
     // without this, there are cases when Cmd-Tabbing to Heynote won't show the window
     app.on("did-become-active", (event) => {
         if (!win.isVisible()) {
-            ensureWindowVisible()
-            win.show()
+            showWindow()
         }
     })
 

@@ -135,6 +135,27 @@ test.describe('electron app', { tag: "@e2e" }, () => {
         expect(notesDir.startsWith(userDataDir)).toBe(true)
     })
 
+    test('activation restores editor focus only when revealing a hidden window', async () => {
+        await expect(page.locator(".cm-content")).toBeFocused()
+        const scroller = page.locator(".tab-bar .scroller")
+        await scroller.focus()
+        await expect(scroller).toBeFocused()
+
+        await electronApp.evaluate(({ app }) => app.emit("did-become-active"))
+        await expect(scroller).toBeFocused()
+
+        await electronApp.evaluate(({ app, BrowserWindow }) => {
+            const win = BrowserWindow.getAllWindows()[0]
+            win.hide()
+            app.emit("did-become-active")
+            app.emit("activate")
+        })
+        await expect.poll(() => electronApp.evaluate(({ BrowserWindow }) => {
+            return BrowserWindow.getAllWindows()[0].isVisible()
+        })).toBe(true)
+        await expect(page.locator(".cm-content")).toBeFocused()
+    })
+
     test('buffer is saved to disk', async () => {
         //heynotePage.goto()
         //await page.waitForTimeout(3000)
