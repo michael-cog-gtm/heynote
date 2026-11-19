@@ -29,6 +29,30 @@ test("test close settings dialog with escape", async ({ page }) => {
     await expect(page.locator("css=.overlay .settings .dialog")).not.toBeVisible()
 })
 
+for (const closeMethod of ["button", "escape"]) {
+    test(`test settings remembers last tab after closing with ${closeMethod}`, async ({ page }) => {
+        await heynotePage.goto()
+        await page.locator(".status-block.settings").click()
+        await expect(page.locator(".settings .sidebar li.tab-general")).toHaveClass(/active/)
+
+        for (const tab of ["appearance", "editing", "general"]) {
+            await page.locator(`.settings .sidebar li.tab-${tab}`).click()
+            if (closeMethod === "button") {
+                await page.locator(".settings .bottom-bar .close").click()
+            } else {
+                await page.locator("body").press("Escape")
+            }
+            await expect(page.locator(".overlay .settings .dialog")).not.toBeVisible()
+            await page.locator(".status-block.settings").click()
+            await expect(page.locator(`.settings .sidebar li.tab-${tab}`)).toHaveClass(/active/)
+            await expect(page.locator(`.settings .tab-content.tab-${tab}`)).toHaveClass(/active/)
+            if (tab !== "general") {
+                await expect(page.locator(`.settings .tab-content.tab-${tab}`)).toBeVisible()
+            }
+        }
+    })
+}
+
 test("test change line gutter setting", async ({ page }) => {
     await heynotePage.goto()
     await expect(page.locator("css=.cm-lineNumbers")).toBeVisible()

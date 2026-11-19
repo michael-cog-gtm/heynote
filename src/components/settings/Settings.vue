@@ -14,6 +14,7 @@
     const defaultFontSize = window.heynote.defaultFontSize
     const defaultDefaultBlockLanguage = "text"
     const defaultDefaultBlockLanguageAutoDetect = true
+    let lastActiveTab = "general"
     
     export default {
         props: {
@@ -75,7 +76,7 @@
                 defaultBlockLanguage: this.initialSettings.defaultBlockLanguage || defaultDefaultBlockLanguage,
                 defaultBlockLanguageAutoDetect: this.initialSettings.defaultBlockLanguageAutoDetect === false ? false : defaultDefaultBlockLanguageAutoDetect,
 
-                activeTab: "general",
+                activeTab: lastActiveTab,
                 isWebApp: window.heynote.platform.isWebApp,
                 customBufferLocation: !!this.initialSettings.bufferPath,
                 systemFonts: [[defaultFontFamily, defaultFontFamily + " (default)"]],
@@ -100,6 +101,7 @@
             }
         },
         beforeUnmount() {
+            lastActiveTab = this.activeTab
             window.removeEventListener("keydown", this.onKeyDown);
         },
 
