@@ -64,6 +64,19 @@ Menu.setApplicationMenu(menu)
 // process.env['ELECTRON_DISABLE_SECURITY_WARNINGS'] = 'true'
 
 export let win: BrowserWindow | null = null
+function updateTitleBarOverlay(focused = win?.isFocused()) {
+    if (isMac || !win || win.isDestroyed()) {
+        return
+    }
+    win.setTitleBarOverlay({
+        color: nativeTheme.shouldUseDarkColors
+            ? (focused ? TITLE_BAR_BG_DARK : TITLE_BAR_BG_DARK_BLURRED)
+            : (focused ? TITLE_BAR_BG_LIGHT : TITLE_BAR_BG_LIGHT_BLURRED),
+        symbolColor: nativeTheme.shouldUseDarkColors ? '#aaa' : '#333',
+    })
+}
+nativeTheme.on("updated", () => updateTitleBarOverlay())
+
 let fileLibrary: FileLibrary | null = null
 let currentLibrarySearch: any = null
 let tray: Tray | null = null;
@@ -297,24 +310,14 @@ async function createWindow() {
         win?.webContents.send(WINDOW_FOCUS_STATE, true)
 
         // update titleBarOverlay colors on Windows/Linux
-        if (!isMac) {
-            win?.setTitleBarOverlay({
-                color: nativeTheme.shouldUseDarkColors ? TITLE_BAR_BG_DARK : TITLE_BAR_BG_LIGHT,
-                symbolColor: nativeTheme.shouldUseDarkColors ? '#aaa' : '#333',
-            })
-        }
+        updateTitleBarOverlay(true)
     })
     win.on("blur", () => {
         // send a message to the renderer to update the window title
         win?.webContents.send(WINDOW_FOCUS_STATE, false)
 
         // update titleBarOverlay colors on Windows/Linux
-        if (!isMac) {
-            win?.setTitleBarOverlay({
-                color: nativeTheme.shouldUseDarkColors ? TITLE_BAR_BG_DARK_BLURRED : TITLE_BAR_BG_LIGHT_BLURRED,
-                symbolColor: nativeTheme.shouldUseDarkColors ? '#aaa' : '#333',
-            })
-        }
+        updateTitleBarOverlay(false)
     })
 
     if (process.env.VITE_DEV_SERVER_URL) { // electron-vite-vue#298
@@ -535,12 +538,7 @@ ipcMain.handle('dark-mode:set', (event, mode) => {
     nativeTheme.themeSource = mode
 
     // update titleBarOverlay colors on Windows/Linux
-    if (!isMac) {
-        win?.setTitleBarOverlay({
-            color: nativeTheme.shouldUseDarkColors ? TITLE_BAR_BG_DARK : TITLE_BAR_BG_LIGHT,
-            symbolColor: nativeTheme.shouldUseDarkColors ? '#aaa' : '#333',
-        })
-    }
+    updateTitleBarOverlay()
 })
 
 ipcMain.handle('dark-mode:get', () => nativeTheme.themeSource)

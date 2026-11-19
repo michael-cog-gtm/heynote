@@ -57,11 +57,7 @@ export const useSettingsStore = defineStore("settings", {
             })
             const onThemeChange = (theme) => {
                 this.theme = theme
-                if (theme === "system") {
-                    document.documentElement.setAttribute("theme", window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
-                } else {
-                    document.documentElement.setAttribute("theme", theme)
-                }
+                document.documentElement.setAttribute("theme", theme)
             }
             onThemeChange(window.heynote.themeMode.initial)
             window.heynote.themeMode.onChange(onThemeChange)

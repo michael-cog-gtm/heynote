@@ -22,6 +22,7 @@ const DIRECTORY_LIST_KEY = "heynote-library-directories"
 const CLIENT_ID_KEY = "clientId"
 
 const mediaMatch = window.matchMedia('(prefers-color-scheme: dark)')
+const resolveTheme = (theme) => theme === "system" ? (mediaMatch.matches ? "dark" : "light") : theme
 let themeCallback = null
 mediaMatch.addEventListener("change", async (event) => {
     if (themeCallback) {
@@ -375,15 +376,14 @@ const Heynote = {
     themeMode: {
         set: (mode) => {
             localStorage.setItem("theme", mode)
-            themeCallback(mode)
+            themeCallback?.(resolveTheme(mode))
             //console.log("set theme to", mode)
         },
         get: async () => {
             const theme = localStorage.getItem("theme") || "system"
-            const systemTheme = mediaMatch.matches ? "dark" : "light"
             return {
                 theme: theme,
-                computed: theme === "system" ? systemTheme : theme,
+                computed: resolveTheme(theme),
             }
         },
         onChange: (callback) => {
@@ -392,7 +392,7 @@ const Heynote = {
         removeListener() {
             themeCallback = null
         },
-        initial: localStorage.getItem("theme") || "system",
+        initial: resolveTheme(localStorage.getItem("theme") || "system"),
     },
 
     getCurrencyData: async () => {

@@ -283,4 +283,16 @@ for (let commandSuffix of [
     }
 }
 
+for (const theme of ["system", "light", "dark"]) {
+    HEYNOTE_COMMANDS[`setTheme${theme[0].toUpperCase()}${theme.slice(1)}`] = cmd(
+        () => () => {
+            useSettingsStore().setTheme(theme)
+            return true
+        },
+        "Color Theme",
+        theme[0].toUpperCase() + theme.slice(1),
+        global,
+    )
+}
+
 export { HEYNOTE_COMMANDS }

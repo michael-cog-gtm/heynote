@@ -132,6 +132,46 @@ test.describe('electron app', { tag: "@e2e" }, () => {
         expect(notesDir.startsWith(userDataDir)).toBe(true)
     })
 
+    test('palette changes the desktop theme and saves the choice', async () => {
+        await page.emulateMedia({ colorScheme: null })
+        for (const theme of ["dark", "light", "system"]) {
+            await page.locator(".cm-content").click()
+            await page.keyboard.press(heynotePage.agnosticKey("Mod+Shift+P"))
+            await page.locator(".note-selector input").fill(`> ${theme}`)
+            const name = theme[0].toUpperCase() + theme.slice(1)
+            await page.getByText(`Color Theme: ${name}`, { exact: true }).click()
+            await expect.poll(async () => {
+                const config = JSON.parse(await fs.readFile(path.join(userDataDir, "config.json"), "utf8"))
+                return config.theme
+            }).toBe(theme)
+            const computed = await electronApp.evaluate(({ nativeTheme }) => nativeTheme.shouldUseDarkColors ? "dark" : "light")
+            await expect(page.locator("html")).toHaveAttribute("theme", computed)
+            await expect(page.locator(".cm-editor")).toHaveClass(new RegExp(`${computed}-theme`))
+        }
+    })
+
+    test('native theme updates refresh the title-bar overlay', async () => {
+        test.skip(process.platform === "darwin", "macOS does not use title-bar overlays")
+        const result = await electronApp.evaluate(({ BrowserWindow, nativeTheme }) => {
+            const window = BrowserWindow.getAllWindows()[0]
+            const original = window.setTitleBarOverlay
+            let overlay = null
+            window.setTitleBarOverlay = (options) => { overlay = options }
+            try {
+                nativeTheme.emit("updated")
+                return { overlay, dark: nativeTheme.shouldUseDarkColors, focused: window.isFocused() }
+            } finally {
+                window.setTitleBarOverlay = original
+            }
+        })
+        expect(result.overlay).toEqual({
+            color: result.dark
+                ? (result.focused ? "#1b1c1d" : "#121313")
+                : (result.focused ? "#ebebeb" : "#e7e7e7"),
+            symbolColor: result.dark ? "#aaa" : "#333",
+        })
+    })
+
     test('buffer is saved to disk', async () => {
         //heynotePage.goto()
         //await page.waitForTimeout(3000)
